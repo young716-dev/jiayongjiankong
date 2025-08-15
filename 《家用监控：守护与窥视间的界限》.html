@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>家用监控：守护与窥视间的界限</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+  
+  <!-- 配置Tailwind自定义颜色和字体 -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            dark: '#021024',
+            navy: '#052659',
+            gray: '#45483B',
+            lightblue: '#7DA0CA',
+            sky: '#C1E8FF',
+          },
+          fontFamily: {
+            'microsoft': ['"Microsoft YaHei"', 'sans-serif'],
+            'kai': ['"KaiTi"', '"STKaiti"', 'serif'],
+            'dengxian': ['"DengXian"', '"STXihei"', 'sans-serif'],
+          },
+        },
+      }
+    }
+  </script>
+  
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .content-auto {
+        content-visibility: auto;
+      }
+      .text-shadow {
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+      }
+      .animate-float {
+        animation: float 6s ease-in-out infinite;
+      }
+      .animate-fade-in {
+        animation: fadeIn 1s ease-out forwards;
+      }
+      .animate-slide-up {
+        animation: slideUp 0.8s ease-out forwards;
+      }
+      .animate-slide-in {
+        animation: slideIn 1s ease-out forwards;
+      }
+      .animate-pulse-slow {
+        animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      }
+      .mask-gradient {
+        mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+        -webkit-mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+      }
+    }
+    
+    @keyframes float {
+      0% { transform: translateY(0px); }
+      50% { transform: translateY(-20px); }
+      100% { transform: translateY(0px); }
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    @keyframes slideUp {
+      from { 
+        opacity: 0;
+        transform: translateY(50px);
+      }
+      to { 
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    @keyframes slideIn {
+      from { 
+        opacity: 0;
+        transform: translateX(-50px);
+      }
+      to { 
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+    
+    /* 平滑滚动 */
+    html {
+      scroll-behavior: smooth;
+    }
+    
+    /* 滚动条美化 */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: #021024;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: #7DA0CA;
+      border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: #C1E8FF;
+    }
+    
+    /* 模块过渡效果 */
+    .section-transition {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+    }
+    
+    .section-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
+</head>
+
+<body class="bg-dark text-sky font-dengxian">
+  <!-- 导航栏 -->
+  <nav id="navbar" class="fixed w-full z-50 transition-all duration-500 bg-dark/80 backdrop-blur-md">
+    <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+      <div class="text-sky font-microsoft text-xl md:text-2xl font-bold">
+        <i class="fa fa-eye mr-2"></i>监控边界
+      </div>
+      <div class="hidden md:flex space-x-6">
+        <a href="#background" class="hover:text-C1E8FF transition-colors duration-300">背景</a>
+        <a href="#stories" class="hover:text-C1E8FF transition-colors duration-300">真实故事</a>
+        <a href="#security" class="hover:text-C1E8FF transition-colors duration-300">安全边界</a>
+        <a href="#opinions" class="hover:text-C1E8FF transition-colors duration-300">大众看法</a>
+      </div>
+      <button id="mobile-menu-button" class="md:hidden text-sky text-xl">
+        <i class="fa fa-bars"></i>
+      </button>
+    </div>
+    <!-- 移动端菜单 -->
+    <div id="mobile-menu" class="hidden md:hidden bg-navy/95 backdrop-blur-md">
+      <div class="container mx-auto px-4 py-3 flex flex-col space-y-4">
+        <a href="#background" class="py-2 hover:text-C1E8FF transition-colors duration-300">背景</a>
+        <a href="#stories" class="py-2 hover:text-C1E8FF transition-colors duration-300">真实故事</a>
+        <a href="#security" class="py-2 hover:text-C1E8FF transition-colors duration-300">安全边界</a>
+        <a href="#opinions" class="py-2 hover:text-C1E8FF transition-colors duration-300">大众看法</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- 英雄区域 -->
+  <header class="relative h-screen flex items-center justify-center overflow-hidden">
+    <div class="absolute inset-0 z-0">
+      <div class="absolute inset-0 bg-gradient-to-b from-dark/80 via-dark/60 to-dark z-10"></div>
+      <img src="主图.jpg" alt="家用监控" class="w-full h-full object-cover">
+    </div>
+    
+    <div class="container mx-auto px-4 z-20 text-center">
+      <h1 class="font-microsoft text-[clamp(2rem,6vw,4rem)] font-bold mb-6 text-shadow animate-fade-in text-sky">
+        家用监控：<br class="md:hidden">守护与窥视间的界限
+      </h1>
+      <p class="text-[clamp(1rem,2vw,1.25rem)] max-w-3xl mx-auto mb-10 opacity-90 animate-fade-in animate-delay-300 text-sky">
+        当科技走进家庭，安全与隐私如何平衡？探索智能监控背后的情感与伦理边界
+      </p>
+      <a href="#background" class="inline-block bg-lightblue hover:bg-sky text-dark font-bold py-6 px-16 rounded-full transition-all duration-300 transform hover:scale-105 animate-fade-in animate-delay-500 mt-8" onclick="document.getElementById('bgMusic').play()">
+        开始探索 <i class="fa fa-arrow-down ml-2"></i>
+      </a>
+      <audio id="bgMusic" src="背景音乐.mp3" loop></audio>
+      <button onclick="toggleMusic()" class="fixed bottom-4 right-4 bg-lightblue hover:bg-sky text-dark font-bold py-2 px-4 rounded-full transition-all duration-300" id="musicControl">
+        <i class="fa fa-play" id="musicIcon"></i>
+      </button>
+      <script>
+        function toggleMusic() {
+          const music = document.getElementById('bgMusic');
+          const icon = document.getElementById('musicIcon');
+          if (music.paused) {
+            music.play();
+            icon.className = 'fa fa-pause';
+          } else {
+            music.pause();
+            icon.className = 'fa fa-play';
+          }
+        }
+      </script>
+    </div>
+    
+    <div class="absolute bottom-10 left-0 right-0 text-center z-20">
+      <div class="animate-bounce inline-block">
+        <i class="fa fa-angle-down text-2xl text-sky/70"></i>
+      </div>
+    </div>
+  </header>
+
+  <!-- 背景部分 -->
+  <section id="background" class="py-20 bg-gradient-to-b from-dark to-navy section-transition">
+    <div class="container mx-auto px-4">
+      <div class="mb-16 text-center">
+        <h2 class="font-microsoft text-[clamp(1.8rem,4vw,2.5rem)] font-bold mb-4 text-sky">背景与现状</h2>
+        <div class="w-24 h-1 bg-lightblue mx-auto rounded-full"></div>
+      </div>
+      
+      <div class="grid md:grid-cols-2 gap-12 items-center">
+        <div class="order-2 md:order-1">
+          <p class="mb-6 text-lg leading-relaxed" style="text-indent: 2em;">
+            随着城市化进程加速与人口规模持续扩大，家庭安全需求显著提升。智能家居的普及使消费者能够通过移动终端实时监控并远程控制家居环境，这一趋势推动家用安防产品与智能家居系统深度融合，进一步激发市场潜力。
+          </p>
+          
+          <p class="mb-6 text-lg leading-relaxed" style="text-indent: 2em;">
+            据《2024年家庭监控摄像机市场分析》数据显示，2022年全球智能家庭监控摄像机渗透率为3.4%，我国则以5.8%的渗透率展现出更大的发展空间。2022年中国消费级监控摄像头总销量达4820万台，其中家庭监控摄像机占据近80%市场份额。
+          </p>
+          
+          <div class="mt-8 bg-dark/50 p-6 rounded-lg border border-lightblue/30">
+            <h3 class="font-microsoft text-xl font-semibold mb-4 text-lightblue">市场格局</h3>
+            <ul class="space-y-3">
+              <li class="flex items-start">
+                <i class="fa fa-check-circle text-lightblue mt-1 mr-3"></i>
+                <span>线上在售品牌数量达672个，行业集中度较低，TOP4品牌合计份额仅40.4%</span>
+              </li>
+              <li class="flex items-start">
+                <i class="fa fa-check-circle text-lightblue mt-1 mr-3"></i>
+                <span>小米以16.9%的占有率保持领先，萤石则以9.1%的份额位居第二</span>
+              </li>
+              <li class="flex items-start">
+                <i class="fa fa-check-circle text-lightblue mt-1 mr-3"></i>
+                <span>产品均价稳定在229元左右，线上市场创造42.8亿元销售额</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+        
+        <div class="order-1 md:order-2 relative">
+          <div class="relative z-10 bg-dark/60 p-6 rounded-xl border border-lightblue/20 backdrop-blur-sm transform hover:scale-[1.02] transition-transform duration-500">
+            <h3 class="font-microsoft text-xl font-semibold mb-6 text-center text-lightblue">监控类型与品牌阵营</h3>
+            
+            <!-- 监控类型 -->
+            <div class="mb-8">
+              <h4 class="font-microsoft text-lg mb-3 text-sky border-b border-lightblue/30 pb-2">常见监控类型</h4>
+              <div class="grid grid-cols-3 gap-4">
+                <div class="bg-navy/50 p-4 rounded-lg text-center hover:bg-navy/80 transition-colors duration-300 relative group">
+                  <i class="fa fa-video-camera text-2xl mb-2 text-lightblue"></i>
+                  <p class="text-sm">半球型</p>
+                  <img src="半球.png" class="absolute top-[100%] left-0 w-full max-h-48 mt-4 p-4 bg-navy/90 rounded-xl border border-lightblue/20 invisible group-hover:visible z-20" alt="半球型监控">
+                </div>
+                <div class="bg-navy/50 p-4 rounded-lg text-center hover:bg-navy/80 transition-colors duration-300 relative group">
+                  <i class="fa fa-television text-2xl mb-2 text-lightblue"></i>
+                  <p class="text-sm">枪机型</p>
+                  <img src="枪机.png" class="absolute top-[100%] left-0 w-full max-h-48 mt-4 p-4 bg-navy/90 rounded-xl border border-lightblue/20 invisible group-hover:visible z-20" alt="枪机型监控">
+                </div>
+                <div class="bg-navy/50 p-4 rounded-lg text-center hover:bg-navy/80 transition-colors duration-300 relative group">
+                  <i class="fa fa-circle-o text-2xl mb-2 text-lightblue"></i>
+                  <p class="text-sm">球机型</p>
+                  <img src="球机.png" class="absolute top-[100%] left-0 w-full max-h-48 mt-4 p-4 bg-navy/90 rounded-xl border border-lightblue/20 invisible group-hover:visible z-20" alt="球机型监控">
+                </div>
+              </div>
+            </div>
+            
+            <!-- 品牌阵营图表 -->
+            <div class="flex flex-col items-center">
+              <h4 class="font-microsoft text-lg mb-3 text-sky border-b border-lightblue/30 pb-2">主要品牌阵营</h4>
+              <canvas id="brandChart" width="300" height="186"></canvas>
+            </div>
+          </div>
+          
+          <!-- 装饰元素 -->
+          <div class="absolute -top-6 -right-6 w-32 h-32 bg-lightblue/10 rounded-full blur-2xl"></div>
+          <div class="absolute -bottom-8 -left-8 w-40 h-40 bg-sky/5 rounded-full blur-3xl"></div>
+        </div>
+      </div>
+      
+      <!-- 技术趋势 -->
+      <div class="mt-20 bg-gradient-to-r from-navy/80 to-dark/80 p-8 rounded-2xl border border-lightblue/20">
+        <h3 class="font-microsoft text-4xl font-semibold mb-8 text-center text-lightblue">技术发展趋势</h3>
+        
+        <div class="grid md:grid-cols-3 gap-6">
+          <div class="bg-dark/40 p-6 rounded-xl hover:transform hover:-translate-y-2 transition-all duration-300 border border-transparent hover:border-lightblue/40">
+            <div class="w-14 h-14 bg-lightblue/20 rounded-full flex items-center justify-center mb-4">
+              <i class="fa fa-picture-o text-2xl text-lightblue"></i>
+            </div>
+            <h4 class="font-microsoft text-xl mb-3 text-sky">画质升级</h4>
+            <p>4K/真3K分辨率成为高端机型标配，提供更清晰的画面细节，满足精准识别需求</p>
+          </div>
+          
+          <div class="bg-dark/40 p-6 rounded-xl hover:transform hover:-translate-y-2 transition-all duration-300 border border-transparent hover:border-lightblue/40">
+            <div class="w-14 h-14 bg-lightblue/20 rounded-full flex items-center justify-center mb-4">
+              <i class="fa fa-microchip text-2xl text-lightblue"></i>
+            </div>
+            <h4 class="font-microsoft text-xl mb-3 text-sky">智能交互</h4>
+            <p>哭声检测、人形识别等AI功能普及，实现更精准的异常行为判断和智能告警</p>
+          </div>
+          
+          <div class="bg-dark/40 p-6 rounded-xl hover:transform hover:-translate-y-2 transition-all duration-300 border border-transparent hover:border-lightblue/40">
+            <div class="w-14 h-14 bg-lightblue/20 rounded-full flex items-center justify-center mb-4">
+              <i class="fa fa-lock text-2xl text-lightblue"></i>
+            </div>
+            <h4 class="font-microsoft text-xl mb-3 text-sky">隐私防护</h4>
+            <p>物理遮蔽、端到端加密等技术应用，有效防止监控内容被非法获取和滥用</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 真实故事部分 -->
+  <section id="stories" class="py-20 bg-gradient-to-b from-navy to-dark section-transition">
+    <div class="container mx-auto px-4">
+      <div class="mb-16 text-center">
+        <h2 class="font-microsoft text-[clamp(1.8rem,4vw,2.5rem)] font-bold mb-4 text-sky">我与家用监控</h2>
+        <div class="w-24 h-1 bg-lightblue mx-auto rounded-full mb-6"></div>
+        <p class="max-w-3xl mx-auto text-lightblue/80">
+          家用监控不仅仅是冰冷的科技产品，它连接着牵挂，承载着情感，成为现代生活中特殊的"纽带"
+        </p>
+      </div>
+      
+      <!-- 故事卡片容器 -->
+      <div class="grid md:grid-cols-4 gap-8">
+        <!-- 宠物故事 -->
+        <div class="group relative">
+          <div class="absolute inset-0 bg-gradient-to-t from-dark via-dark/60 to-transparent z-10 rounded-2xl"></div>
+          <img src="ai宠物.png" alt="宠物监控" class="w-full h-[500px] object-cover rounded-2xl transform group-hover:scale-105 transition-transform duration-700">
+          
+          <div class="absolute bottom-0 left-0 right-0 p-6 z-20">
+            <div class="w-16 h-16 bg-lightblue/20 backdrop-blur-sm rounded-full flex items-center justify-center mb-4 group-hover:bg-lightblue/40 transition-colors duration-300">
+              <i class="fa fa-paw text-2xl text-sky"></i>
+            </div>
+            <h3 class="font-microsoft text-2xl font-semibold mb-3 text-sky">宠物监护</h3>
+            <p class="text-sky/90 mb-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+              "上课累了、想家了，就点开看看监控，就像它在身边似的。"
+            </p>
+            <button class="story-btn bg-lightblue/20 hover:bg-lightblue/40 text-sky px-4 py-2 rounded-full text-sm transition-all duration-300" data-story="pet">
+              查看故事 <i class="fa fa-arrow-right ml-1"></i>
+            </button>
+          </div>
+        </div>
+        
+        <!-- 老人故事 -->
+        <div class="group relative">
+          <div class="absolute inset-0 bg-gradient-to-t from-dark via-dark/60 to-transparent z-10 rounded-2xl"></div>
+          <img src="ai老人2.png" alt="老人监控" class="w-full h-[500px] object-cover rounded-2xl transform group-hover:scale-105 transition-transform duration-700">
+          
+          <div class="absolute bottom-0 left-0 right-0 p-6 z-20">
+            <div class="w-16 h-16 bg-lightblue/20 backdrop-blur-sm rounded-full flex items-center justify-center mb-4 group-hover:bg-lightblue/40 transition-colors duration-300">
+              <i class="fa fa-home text-2xl text-sky"></i>
+            </div>
+            <h3 class="font-microsoft text-2xl font-semibold mb-3 text-sky">老人照看</h3>
+            <p class="text-sky/90 mb-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+              "监控像根无形的线，把千里之外的牵挂串了起来。"
+            </p>
+            <button class="story-btn bg-lightblue/20 hover:bg-lightblue/40 text-sky px-4 py-2 rounded-full text-sm transition-all duration-300" data-story="elder">
+              查看故事 <i class="fa fa-arrow-right ml-1"></i>
+            </button>
+          </div>
+        </div>
+        
+        <!-- 独居故事 -->
+        <div class="group relative">
+          <div class="absolute inset-0 bg-gradient-to-t from-dark via-dark/60 to-transparent z-10 rounded-2xl"></div>
+          <img src="ai独居.png" alt="独居监控" class="w-full h-[500px] object-cover rounded-2xl transform group-hover:scale-105 transition-transform duration-700">
+          
+          <div class="absolute bottom-0 left-0 right-0 p-6 z-20">
+            <div class="w-16 h-16 bg-lightblue/20 backdrop-blur-sm rounded-full flex items-center justify-center mb-4 group-hover:bg-lightblue/40 transition-colors duration-300">
+              <i class="fa fa-user text-2xl text-sky"></i>
+            </div>
+            <h3 class="font-microsoft text-2xl font-semibold mb-3 text-sky">独居安全</h3>
+            <p class="text-sky/90 mb-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+              "它像一把双刃剑，既保护我，也提醒我，隐私和安全不可兼得。"
+            </p>
+            <button class="story-btn bg-lightblue/20 hover:bg-lightblue/40 text-sky px-4 py-2 rounded-full text-sm transition-all duration-300" data-story="alone">
+              查看故事 <i class="fa fa-arrow-right ml-1"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- 新增宠物故事副本 -->
+        <div class="group relative">
+          <div class="absolute inset-0 bg-gradient-to-t from-dark via-dark/60 to-transparent z-10 rounded-2xl"></div>
+          <img src="ai儿童.png" alt="宠物监控副本" class="w-full h-[500px] object-cover rounded-2xl transform group-hover:scale-105 transition-transform duration-700">
+          
+          <div class="absolute bottom-0 left-0 right-0 p-6 z-20">
+            <div class="w-16 h-16 bg-lightblue/20 backdrop-blur-sm rounded-full flex items-center justify-center mb-4 group-hover:bg-lightblue/40 transition-colors duration-300">
+              <i class="fa fa-book text-2xl text-sky"></i>
+            </div>
+            <h3 class="font-microsoft text-2xl font-semibold mb-3 text-sky">儿童监护</h3>
+            <p class="text-sky/90 mb-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+              "镜头之下，被守护的究竟是孩子的成长，还是家长的控制欲？"
+            </p>
+            <button class="story-btn bg-lightblue/20 hover:bg-lightblue/40 text-sky px-4 py-2 rounded-full text-sm transition-all duration-300" data-story="kid">
+              查看故事 <i class="fa fa-arrow-right ml-1"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 故事详情模态框 -->
+      <div id="story-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+        <div class="absolute inset-0 bg-dark/90 backdrop-blur-sm" id="modal-overlay"></div>
+        <div class="relative z-10 bg-gradient-to-br backdrop-blur-md w-1/2 max-w-3xl max-h-[90vh] rounded-2xl p-8 overflow-y-auto transform transition-all duration-300 scale-95 opacity-0" id="modal-content">
+          <button id="close-modal" class="absolute top-6 right-6 text-sky/70 hover:text-sky text-2xl transition-colors">
+            <i class="fa fa-times"></i>
+          </button>
+          
+          <div id="modal-body">
+            <!-- 故事内容将通过JS动态加载 -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 安全边界部分 -->
+  <section id="security" class="py-20 bg-gradient-to-b from-dark to-navy section-transition">
+    <div class="container mx-auto px-4">
+      <div class="mb-16 text-center">
+        <h2 class="font-microsoft text-[clamp(1.8rem,4vw,2.5rem)] font-bold mb-4 text-sky">安全边界</h2>
+        <div class="w-24 h-1 bg-lightblue mx-auto rounded-full mb-6"></div>
+        <p class="max-w-3xl mx-auto text-lightblue/80">
+          家用监控在带来安全保障的同时，也引发了关于隐私保护的深层思考，边界何在？
+        </p>
+      </div>
+      
+      <div class="grid md:grid-cols-2 gap-12 items-center mb-20">
+        <div>
+          <h3 class="font-microsoft text-2xl font-semibold mb-6 text-lightblue">隐私风险与案例</h3>
+          
+          <div class="space-y-8">
+            <div class="bg-dark/50 p-6 rounded-xl border-l-4 border-lightblue hover:border-sky transition-colors duration-300">
+              <h4 class="font-microsoft text-xl mb-3 text-sky">邻里监控侵权</h4>
+              <p class="mb-4">占比最高的监控纠纷类型，核心在于设备视角越界采集邻居住户活动信息。超70%案件通过社区或司法调解解决。</p>
+              <p class="text-lightblue/80 italic">典型案例：某女士因门口监控拍摄邻居活动，被法院判决拆除设备并销毁涉及他人隐私的视频资料。</p>
+            </div>
+            
+            <div class="bg-dark/50 p-6 rounded-xl border-l-4 border-lightblue hover:border-sky transition-colors duration-300">
+              <h4 class="font-microsoft text-xl mb-3 text-sky">家庭内部隐私侵蚀</h4>
+              <p>室内监控可能侵蚀家庭成员隐私空间，未成年人与雇工在持续电子监控下易产生心理压迫感，损害家庭信任关系。</p>
+            </div>
+            
+            <div class="bg-dark/50 p-6 rounded-xl border-l-4 border-lightblue hover:border-sky transition-colors duration-300">
+              <h4 class="font-microsoft text-xl mb-3 text-sky">技术漏洞与黑客攻击</h4>
+              <p class="mb-4">技术漏洞或恶意程序可成为远程窥探的"数字后门"，将安全设备异化为隐私窃取工具。</p>
+              <p class="text-lightblue/80 italic">典型案例：北京朝阳法院通报，单名黑客非法控制全球18万余个摄像头，涵盖家庭、医院等场所，非法牟利80余万元，最终获刑5年。</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="relative">
+          <div class="relative z-10">
+            <div class="bg-dark/60 p-8 rounded-2xl border border-lightblue/20 backdrop-blur-sm mb-8">
+              <h3 class="font-microsoft text-xl font-semibold mb-6 text-center text-lightblue">相关法律条款</h3>
+              
+              <div class="space-y-6">
+                <div class="flex items-start">
+                  <div class="flex-shrink-0 w-12 h-12 bg-lightblue/20 rounded-full flex items-center justify-center mr-4">
+                    <i class="fa fa-gavel text-xl text-lightblue"></i>
+                  </div>
+                  <div class="flex justify-center">
+                    <h4 class="font-microsoft text-lg mb-1 text-sky">《民法典》第1032条</h4>
+                    <p>自然人享有隐私权。任何组织或者个人不得以刺探、侵扰、泄露、公开等方式侵害他人的隐私权。</p>
+                  </div>
+                </div>
+                
+                <div class="flex items-start">
+                  <div class="flex-shrink-0 w-12 h-12 bg-lightblue/20 rounded-full flex items-center justify-center mr-4">
+                    <i class="fa fa-gavel text-xl text-lightblue"></i>
+                  </div>
+                  <div class="flex justify-center">
+                    <h4 class="font-microsoft text-lg mb-1 text-sky">《民法典》第1033条</h4>
+                    <p>除法律另有规定或者权利人明确同意外，任何组织或者个人不得拍摄、窥视他人的住宅、宾馆房间等私密空间。</p>
+                  </div>
+                </div>
+                
+                <div class="flex items-start">
+                  <div class="flex-shrink-0 w-12 h-12 bg-lightblue/20 rounded-full flex items-center justify-center mr-4">
+                    <i class="fa fa-gavel text-xl text-lightblue"></i>
+                  </div>
+                  <div class="flex justify-center">
+                    <h4 class="font-microsoft text-lg mb-1 text-sky">《公共安全视频图像信息系统管理条例》</h4>
+                    <p>2025年4月实施，明确要求公共区域监控向公安机关备案，管理人适用过错推定原则。</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="bg-gradient-to-r from-lightblue/20 to-sky/20 p-6 rounded-xl text-center">
+              <p class="text-lg italic font-kai">
+                "在安全防护与隐私尊重之间构建可持续的平衡支点，需要用户、厂商与法律的三方协同。"
+              </p>
+            </div>
+          </div>
+          
+          <!-- 装饰元素 -->
+          <div class="absolute -top-10 -left-10 w-40 h-40 bg-lightblue/10 rounded-full blur-3xl"></div>
+          <div class="absolute -bottom-6 -right-6 w-32 h-32 bg-sky/5 rounded-full blur-2xl"></div>
+        </div>
+      </div>
+      
+      <!-- 防护措施 -->
+      <div class="container mx-auto px-3">
+        <h3 class="font-microsoft text-2xl font-semibold mb-10 text-center text-lightblue">隐私保护方案</h3>
+        
+        <div class="grid md:grid-cols-3 gap-8">
+          <div class="bg-gradient-to-b from-dark/80 to-navy/80 p-6 rounded-2xl border border-lightblue/10 hover:border-lightblue/30 transition-all duration-300 transform hover:-translate-y-2">
+            <div class="w-16 h-16 bg-lightblue/20 rounded-full flex items-center justify-center mb-6 mx-auto">
+              <i class="fa fa-user-circle text-2xl text-lightblue"></i>
+            </div>
+            <h3 class="font-microsoft text-xl font-semibold mb-4 text-center text-sky">用户层面</h4>
+            <ul class="space-y-3">
+              <li class="flex items-start">
+                <i class="fa fa-check text-lightblue mt-1 mr-3"></i>
+                <span>安装前与邻居沟通，调整设备角度限定监控范围</span>
+              </li>
+              <li class="flex items-start">
+                <i class="fa fa-check text-lightblue mt-1 mr-3"></i>
+                <span>关闭非必要功能如自动追踪与录音</span>
+              </li>
+              <li class="flex items-start">
+                <i class="fa fa-check text-lightblue mt-1 mr-3"></i>
+                <span>严格保管访问权限并设置复杂密码</span>
+              </li>
+              <li class="flex items-start">
+                <i class="fa fa-check text-lightblue mt-1 mr-3"></i>
+                <span>人在家时关闭或遮盖摄像头</span>
+              </li>
+            </ul>
+          </div>
+          
+          <div class="bg-gradient-to-b from-dark/80 to-navy/80 p-6 rounded-2xl border border-lightblue/10 hover:border-lightblue/30 transition-all duration-300 transform hover:-translate-y-2">
+            <div class="w-16 h-16 bg-lightblue/20 rounded-full flex items-center justify-center mb-6 mx-auto">
+              <i class="fa fa-cogs text-2xl text-lightblue"></i>
+            </div>
+            <h3 class="font-microsoft text-xl font-semibold mb-4 text-center text-sky">技术层面</h4>
+            <ul class="space-y-3">
+              <li class="flex items-start">
+                <i class="fa fa-check text-lightblue mt-1 mr-3"></i>
+                <span>选择带物理遮蔽功能的设备（如中兴SC50）</span>
+              </li>
+              <li class="flex items-start">
+                <i class="fa fa-check text-lightblue mt-1 mr-3"></i>
+                <span>优先使用端到端加密与本地存储（如华为海雀）</span>
+              </li>
+              <li class="flex items-start">
+                <i class="fa fa-check text-lightblue mt-1 mr-3"></i>
+                <span>选择带数字水印功能的品牌（如萤石）</span>
+              </li>
+              <li class="flex items-start">
+                <i class="fa fa-check text-lightblue mt-1 mr-3"></i>
+                <span>定期更新设备固件与密码</span>
+              </li>
+            </ul>
+          </div>
+          
+          <div class="bg-gradient-to-b from-dark/80 to-navy/80 p-6 rounded-2xl border border-lightblue/10 hover:border-lightblue/30 transition-all duration-300 transform hover:-translate-y-2">
+            <div class="w-16 h-16 bg-lightblue/20 rounded-full flex items-center justify-center mb-6 mx-auto">
+              <i class="fa fa-balance-scale text-2xl text-lightblue"></i>
+            </div>
+            <h3 class="font-microsoft text-xl font-semibold mb-4 text-center text-sky">法律监管</h4>
+            <ul class="space-y-3">
+              <li class="flex items-start">
+                <i class="fa fa-check text-lightblue mt-1 mr-3"></i>
+                <span>公共区域监控需向公安机关备案</span>
+              </li>
+              <li class="flex items-start">
+                <i class="fa fa-check text-lightblue mt-1 mr-3"></i>
+                <span>明确管理人过错推定原则与赔偿标准</span>
+              </li>
+              <li class="flex items-start">
+                <i class="fa fa-check text-lightblue mt-1 mr-3"></i>
+                <span>加强对厂商数据安全的监管与处罚</span>
+              </li>
+              <li class="flex items-start">
+                <i class="fa fa-check text-lightblue mt-1 mr-3"></i>
+                <span>完善监控侵权纠纷的调解与诉讼机制</span>
+              </li>
+            </ul>          </div>        </div>      </div>
+
+      <!-- 家装监控建议视频 -->
+      <div class="mt-8 flex justify-center">
+        <video src="警察对家装监控的小建议.mp4" controls class="w-1/4 rounded-lg border border-lightblue/30"></video>
+      </div>
+    </div>
+  </section>
+
+  <!-- 大众看法部分 -->
+  <section id="opinions" class="py-20 bg-gradient-to-b from-navy to-dark section-transition">
+    <div class="container mx-auto px-4">
+      <div class="mb-16 text-center">
+        <h2 class="font-microsoft text-[clamp(1.8rem,4vw,2.5rem)] font-bold mb-4 text-sky">大众看法</h2>
+        <div class="w-24 h-1 bg-lightblue mx-auto rounded-full mb-6"></div>
+        <p class="max-w-3xl mx-auto text-lightblue/80">
+          对于家用监控，不同群体有着不同的观点与态度，在安全与隐私之间寻找平衡
+        </p>
+      </div>
+      
+      <!-- 词云图区域 -->
+      <div class="mb-20">
+        <h3 class="font-microsoft text-2xl font-semibold mb-8 text-center text-lightblue">关键词云图</h3>
+        
+        <div class="relative bg-dark/60 p-8 rounded-2xl border border-lightblue/20 backdrop-blur-sm">
+          <div id="wordcloud" class="flex flex-wrap justify-center gap-2 md:gap-4 py-6">
+            <!-- 打乱顺序并添加旋转样式 -->
+            <span class="text-sky text-4xl md:text-5xl font-bold" style="opacity: 0.9; transform: rotate(90deg);">安全</span>
+            <span class="text-orange-400 text-xl md:text-2xl" style="opacity: 0.6; transform: rotate(180deg);">猜忌</span>
+            <span class="text-gray-400 text-2xl md:text-3xl" style="opacity: 0.7; transform: rotate(360deg);">必要</span>
+            <span class="text-sky text-3xl md:text-4xl font-bold" style="opacity: 0.8; transform: rotate(270deg);">守护</span>
+            <span class="text-orange-400 text-4xl md:text-5xl font-bold" style="opacity: 0.9; transform: rotate(45deg);">隐私侵犯</span>
+            <span class="text-sky text-xl md:text-2xl" style="opacity: 0.6; transform: rotate(135deg);">远程</span>
+            <span class="text-gray-400 text-xl md:text-2xl" style="opacity: 0.6; transform: rotate(225deg);">边界模糊</span>
+            <span class="text-orange-400 text-lg md:text-xl" style="opacity: 0.5; transform: rotate(315deg);">隔阂</span>
+            <span class="text-sky text-base md:text-lg" style="opacity: 0.4; transform: rotate(90deg);">实用</span>
+            <span class="text-gray-400 text-base md:text-lg" style="opacity: 0.4; transform: rotate(180deg);">伦理争议</span>
+            <span class="text-orange-400 text-xl md:text-2xl" style="opacity: 0.6; transform: rotate(360deg);">束缚</span>
+            <span class="text-sky text-lg md:text-xl" style="opacity: 0.5; transform: rotate(270deg);">放心</span>
+            <span class="text-gray-400 text-xl md:text-2xl" style="opacity: 0.6; transform: rotate(45deg);">争议性</span>
+            <span class="text-orange-400 text-base md:text-lg" style="opacity: 0.4; transform: rotate(135deg);">冒犯</span>
+            <span class="text-sky text-sm md:text-base" style="opacity: 0.3; transform: rotate(225deg);">安心感</span>
+            <span class="text-gray-400 text-lg md:text-xl" style="opacity: 0.5; transform: rotate(315deg);">利弊共存</span>
+            <span class="text-orange-400 text-sm md:text-base" style="opacity: 0.3; transform: rotate(90deg);">控制欲</span>
+            <span class="text-sky text-base md:text-lg" style="opacity: 0.4; transform: rotate(180deg);">可靠</span>
+            <span class="text-orange-400 text-lg md:text-xl" style="opacity: 0.5; transform: rotate(360deg);">信任危机</span>
+            <span class="text-sky text-lg md:text-xl" style="opacity: 0.5; transform: rotate(270deg);">安心</span>
+            <span class="text-gray-400 text-2xl md:text-3xl" style="opacity: 0.7; transform: rotate(45deg);">双刃剑</span>
+            <span class="text-orange-400 text-xl md:text-2xl" style="opacity: 0.6; transform: rotate(135deg);">滥用</span>
+            <span class="text-sky text-lg md:text-xl" style="opacity: 0.5; transform: rotate(225deg);">便捷</span>
+            <span class="text-orange-400 text-base md:text-lg" style="opacity: 0.4; transform: rotate(315deg);">监视感</span>
+            <span class="text-gray-400 text-xl md:text-2xl" style="opacity: 0.6; transform: rotate(90deg);">监护权</span>
+            <span class="text-orange-400 text-2xl md:text-3xl" style="opacity: 0.7; transform: rotate(180deg);">压抑</span>
+            <span class="text-sky text-xl md:text-2xl" style="opacity: 0.6; transform: rotate(360deg);">省心</span>
+            <span class="text-gray-400 text-base md:text-lg" style="opacity: 0.4; transform: rotate(270deg);">法律模糊</span>
+            <span class="text-orange-400 text-xl md:text-2xl" style="opacity: 0.6; transform: rotate(45deg);">黑客风险</span>
+            <span class="text-sky text-3xl md:text-4xl font-bold" style="opacity: 0.8; transform: rotate(135deg);">监视</span>
+            <span class="text-orange-400 text-lg md:text-xl" style="opacity: 0.5; transform: rotate(225deg);">不安</span>
+          </div>
+          
+          <div class="flex justify-center mt-8 space-x-8">
+            <div class="flex items-center">
+              <div class="w-4 h-4 bg-sky rounded-full mr-2"></div>
+              <span>正面词汇</span>
+            </div>
+            <div class="flex items-center">
+              <div class="w-4 h-4 bg-orange-400 rounded-full mr-2"></div>
+              <span>负面词汇</span>
+            </div>
+            <div class="flex items-center">
+              <div class="w-4 h-4 bg-gray-400 rounded-full mr-2"></div>
+              <span>中性/争议词汇</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 群体态度对比 -->
+      <div class="grid md:grid-cols-2 gap-12 mb-20">
+        <div>
+          <h3 class="font-microsoft text-2xl font-semibold mb-6 text-lightblue">群体态度分化</h3>
+          
+          <div class="bg-dark/50 p-6 rounded-xl border border-lightblue/20">
+            <canvas id="attitudeChart" width="400" height="300"></canvas>
+          </div>
+          
+          <div class="mt-8 space-y-6">
+            <div class="bg-navy/30 p-4 rounded-lg">
+              <h4 class="font-microsoft text-lg mb-2 text-sky">年龄差异</h4>
+              <p>20-39岁群体是安装主力（占比超70%），看重远程监护功能；老年人更担忧被窥视。</p>
+            </div>
+            
+            <div class="bg-navy/30 p-4 rounded-lg">
+              <h4 class="font-microsoft text-lg mb-2 text-sky">角色立场</h4>
+              <p>物业公司可在公共区域装监控，但需公安备案并避开住户窗户；内行人士警告普通家用监控系统安全性低，易被黑客破解。</p>
+            </div>
+          </div>
+        </div>
+        
+        <div>
+          <h3 class="font-microsoft text-2xl font-semibold mb-6 text-lightblue">主要争议焦点</h3>
+          
+          <div class="space-y-8">
+            <div class="bg-gradient-to-r from-dark/70 to-navy/70 p-6 rounded-xl">
+              <h4 class="font-microsoft text-xl mb-4 text-sky flex items-center">
+                <i class="fa fa-home text-lightblue mr-3"></i>
+                家庭内部：关爱还是监视？
+              </h4>
+              
+              <div class="space-y-4">
+                <div class="flex justify-center">
+                  <h5 class="text-lightblue font-semibold mb-2">支持者观点</h5>
+                  <p>73%的20-29岁年轻人安装监控是为远程看护老人、幼儿或宠物，尤其当老人行动不便或幼儿独自在家时，监控能及时预警风险。</p>
+                </div>
+                
+                <div class="flex justify-center">
+                  <h5 class="text-lightblue font-semibold mb-2">反对者观点</h5>
+                  <p>高中生指责父母在卧室装监控是"侵犯隐私"，教育专家指出此举漠视孩子人格尊严，可能引发亲子矛盾或心理问题。</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="bg-gradient-to-r from-dark/70 to-navy/70 p-6 rounded-xl">
+              <h4 class="font-microsoft text-xl mb-4 text-sky flex items-center">
+                <i class="fa fa-users text-lightblue mr-3"></i>
+                邻里冲突：公共与私人的拉锯
+              </h4>
+              
+              <div class="space-y-4">
+                <p>低层住户为防高空抛物或车辆刮蹭，常在院落装监控，但楼上住户强烈不满；对门监控若拍摄邻居入户门、阳台等区域，记录其出行规律或社交活动，即构成隐私侵权。</p>
+                
+                <div class="bg-dark/40 p-4 rounded-lg mt-4">
+                  <h5 class="text-lightblue font-semibold mb-2">法律红线</h5>
+                  <p>《民法典》第1033条明确：允许拍摄公共区域（如小区道路），但禁止拍摄他人私密空间（住宅、阳台）或私密活动。</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 互动调查 -->
+      <div>
+        <h3 class="font-microsoft text-2xl font-semibold mb-8 text-center text-lightblue">互动调查</h3>
+        
+        <div class="bg-dark/60 p-8 rounded-2xl border border-lightblue/20 backdrop-blur-sm max-w-3xl mx-auto">
+          <form id="survey-form">
+            <div class="mb-8">
+              <label class="block text-lg mb-4 text-sky">1. 您家里是否有安装家用监控？</label>
+              <div class="flex flex-wrap gap-4">
+                <label class="inline-flex items-center">
+                  <input type="radio" name="installed" value="yes" class="form-radio text-lightblue focus:ring-lightblue">
+                  <span class="ml-2">是</span>
+                </label>
+                <label class="inline-flex items-center">
+                  <input type="radio" name="installed" value="no" class="form-radio text-lightblue focus:ring-lightblue">
+                  <span class="ml-2">否</span>
+                </label>
+                <label class="inline-flex items-center">
+                  <input type="radio" name="installed" value="considering" class="form-radio text-lightblue focus:ring-lightblue">
+                  <span class="ml-2">正在考虑</span>
+                </label>
+              </div>
+            </div>
+            
+            <div class="mb-8">
+              <label class="block text-lg mb-4 text-sky">2. 安装家用监控的主要目的是？（可多选）</label>
+              <div class="grid md:grid-cols-2 gap-3">
+                <label class="inline-flex items-center">
+                  <input type="checkbox" name="purpose" value="security" class="form-checkbox text-lightblue focus:ring-lightblue">
+                  <span class="ml-2">防盗安保</span>
+                </label>
+                <label class="inline-flex items-center">
+                  <input type="checkbox" name="purpose" value="elderly" class="form-checkbox text-lightblue focus:ring-lightblue">
+                  <span class="ml-2">照看老人</span>
+                </label>
+                <label class="inline-flex items-center">
+                  <input type="checkbox" name="purpose" value="children" class="form-checkbox text-lightblue focus:ring-lightblue">
+                  <span class="ml-2">看护儿童</span>
+                </label>
+                <label class="inline-flex items-center">
+                  <input type="checkbox" name="purpose" value="pets" class="form-checkbox text-lightblue focus:ring-lightblue">
+                  <span class="ml-2">监护宠物</span>
+                </label>
+                <label class="inline-flex items-center">
+                  <input type="checkbox" name="purpose" value="evidence" class="form-checkbox text-lightblue focus:ring-lightblue">
+                  <span class="ml-2">证据留存</span>
+                </label>
+                <label class="inline-flex items-center">
+                  <input type="checkbox" name="purpose" value="other" class="form-checkbox text-lightblue focus:ring-lightblue">
+                  <span class="ml-2">其他原因</span>
+                </label>
+              </div>
+            </div>
+            
+            <div class="mb-8">
+              <label class="block text-lg mb-4 text-sky">3. 您认为安装家用监控，看护和监视之间的界限在哪里？</label>
+              <textarea name="boundary" rows="4" class="w-full bg-navy/50 border border-lightblue/30 rounded-lg p-4 focus:outline-none focus:ring-2 focus:ring-lightblue resize-none" placeholder="请输入您的看法..."></textarea>
+            </div>
+            
+            <div class="text-center">
+              <button type="submit" class="bg-lightblue hover:bg-sky text-dark font-bold py-3 px-8 rounded-full transition-all duration-300 transform hover:scale-105">
+                提交看法 <i class="fa fa-paper-plane ml-2"></i>
+              </button>
+            </div>
+          </form>
+          
+          <div id="submit-success" class="hidden mt-8 text-center bg-lightblue/20 text-sky p-6 rounded-lg">
+            <i class="fa fa-check-circle text-3xl mb-3 text-lightblue"></i>
+            <p>感谢您的参与！您的看法已成功提交。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 页脚 -->
+  <footer class="bg-dark py-12 border-t border-lightblue/10">
+    <div class="container mx-auto px-4">
+      <div class="text-center">
+        <h3 class="font-microsoft text-xl font-bold mb-6 text-sky">家用监控：守护与窥视间的界限</h3>
+        <p class="text-lightblue/70 mb-8 max-w-2xl mx-auto">
+          本专题探讨家用监控在现代生活中的角色与影响，旨在引发公众对安全与隐私边界的思考，促进科技与人文的平衡发展。
+        </p>
+        <div class="flex justify-center space-x-6 mb-8">
+          <a href="#" class="text-lightblue hover:text-sky transition-colors duration-300">
+            <i class="fa fa-weibo text-2xl"></i>
+          </a>
+          <a href="#" class="text-lightblue hover:text-sky transition-colors duration-300">
+            <i class="fa fa-wechat text-2xl"></i>
+          </a>
+          <a href="#" class="text-lightblue hover:text-sky transition-colors duration-300">
+            <i class="fa fa-twitter text-2xl"></i>
+          </a>
+          <a href="#" class="text-lightblue hover:text-sky transition-colors duration-300">
+            <i class="fa fa-facebook text-2xl"></i>
+          </a>
+        </div>
+        <p class="text-lightblue/50 text-sm">
+          &copy; 2025 融合新闻专题 | 家用监控边界探讨
+        </p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // 导航栏滚动效果
+    window.addEventListener('scroll', function() {
+      const navbar = document.getElementById('navbar');
+      if (window.scrollY > 50) {
+        navbar.classList.add('py-2', 'bg-dark/90');
+        navbar.classList.remove('py-3', 'bg-dark/80');
+      } else {
+        navbar.classList.add('py-3', 'bg-dark/80');
+        navbar.classList.remove('py-2', 'bg-dark/90');
+      }
+    });
+    
+    // 移动端菜单切换
+    document.getElementById('mobile-menu-button').addEventListener('click', function() {
+      const mobileMenu = document.getElementById('mobile-menu');
+      mobileMenu.classList.toggle('hidden');
+    });
+    
+    // 关闭移动菜单（点击链接后）
+    document.querySelectorAll('#mobile-menu a').forEach(link => {
+      link.addEventListener('click', function() {
+        document.getElementById('mobile-menu').classList.add('hidden');
+      });
+    });
+    
+    // 滚动显示动画
+    const sections = document.querySelectorAll('.section-transition');
+    
+    const observerOptions = {
+      root: null,
+      rootMargin: '0px',
+      threshold: 0.1
+    };
+    
+    const observer = new IntersectionObserver((entries, observer) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('section-visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, observerOptions);
+    
+    sections.forEach(section => {
+      observer.observe(section);
+    });
+    
+    // 品牌阵营图表
+    const brandCtx = document.getElementById('brandChart').getContext('2d');
+    new Chart(brandCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['互联网生态系', '专业安防系', '垂直性价比'],
+        datasets: [{
+          data: [35, 30, 35],
+          backgroundColor: [
+            '#7DA0CA',
+            '#C1E8FF',
+            '#45483B'
+          ],
+          borderColor: '#021024',
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: false,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              color: '#C1E8FF',
+              font: {
+                family: '"DengXian"',
+                size: 12
+              },
+              padding: 20
+            }
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const labels = [
+                  '小米、华为等',
+                  '海康威视(萤石)、大华(乐橙)等',
+                  '乔安、TP-Link等'
+                ];
+                return `${context.label}: ${labels[context.dataIndex]}`;
+              }
+            }
+          }
+        }
+      }
+    });
+    
+    // 群体态度图表
+    const attitudeCtx = document.getElementById('attitudeChart').getContext('2d');
+    new Chart(attitudeCtx, {
+      type: 'bar',
+      data: {
+        labels: ['年轻家长', '青少年', '低层住户', '高层住户'],
+        datasets: [
+          {
+            label: '支持率',
+            data: [85, 22, 68, 31],
+            backgroundColor: '#7DA0CA',
+            barPercentage: 0.6
+          },
+          {
+            label: '反对率',
+            data: [15, 78, 32, 69],
+            backgroundColor: '#45483B',
+            barPercentage: 0.6
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          x: {
+            grid: {
+              color: 'rgba(125, 160, 202, 0.1)'
+            },
+            ticks: {
+              color: '#C1E8FF'
+            }
+          },
+          y: {
+            beginAtZero: true,
+            max: 100,
+            grid: {
+              color: 'rgba(125, 160, 202, 0.1)'
+            },
+            ticks: {
+              color: '#C1E8FF',
+              callback: function(value) {
+                return value + '%';
+              }
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            position: 'top',
+            labels: {
+              color: '#C1E8FF',
+              font: {
+                family: '"DengXian"'
+              }
+            }
+          }
+        }
+      }
+    });
+    
+    // 故事内容
+    const stories = {
+      pet: {
+        title: "宠物监护：连接校园与家的特殊纽带",
+        content: `
+          <div class="mb-6">
+            <img src="宠物.jpg" alt="宠物监控" class="w-full h-64 object-cover rounded-xl">
+          </div>
+          
+          <p class="font-kai text-lg leading-relaxed mb-4">
+            &emsp;&emsp;21 岁的大三学生小c时常划开手机，屏幕里立刻传来 “咕噜噜” 的滚动声。家里客厅的地板上，雪纳瑞豆豆正追着一个白色小圆球跑。这个能移动、能对话的监控设备，是小c上大学后特意买的，不仅能 360 度转动镜头实时看护，还能通过手机操控在地上行走，支持实时讲话、拍照和录像，电量低时会自己滚回充电座补充电量，主要作为她在异乡求学时，随时能 “见” 到爱犬的窗口。
+          </p>
+          
+          <p class="font-kai text-lg leading-relaxed mb-4">
+            &emsp;&emsp;“爸妈白天上班忙，发微信就说‘豆豆在家睡觉呢’，哪有自己看方便。” 小c点开手机麦克风，轻声喊了句 “豆豆过来”，屏幕里的小狗立刻颠颠地跑到监控球前，用鼻子蹭着球面。她的手机相册里存着几十张截图：有豆豆把监控球当玩具咬的调皮样，也有它趴在球旁边打盹的安静瞬间。“上课累了、想家了，就点开看看监控，就像它在身边似的。
+          </p>
+          
+          <p class="font-kai text-lg leading-relaxed mb-4">
+            &emsp;&emsp;这个会跑的监控，成了连接校园与家的特殊纽带。监控也并非时刻运转。母亲说，晚上睡觉前必须关掉，不然豆豆总盯着小球看，睡不踏实。小c也渐渐养成习惯：早上起床看一眼豆豆是否在窝里，中午吃饭时通过麦克风喊它两声，晚上睡前就和父母说 “把小球关了吧”，如同给豆豆盖好被子，让它能安安稳稳入眠。
+          </p>
+          
+          <p class="font-kai text-lg leading-relaxed mb-4">
+            &emsp;&emsp;小c的好朋友们都知道她手机里藏着个 “豆豆专属频道”。有人羡慕她能远程陪狗，有人笑她 “比照顾自己还上心”，但对小 c 来说，这个圆滚滚的监控球早已不只是个设备 —— 每次操控小球穿过客厅，看着豆豆颠颠跑过来的样子，“就好像我从没离开过家。” 这个会跑会说话的小圆球，就这么把千里之外的牵挂串了起来，一边装着她的思念，一边护着毛孩子的日常。
+          </p>
+          
+          <p class="font-kai text-lg leading-relaxed">
+            &emsp;&emsp;对小c和豆豆来说，这个会滚动的监控球早已超越了 “看护工具” 的意义。它像一个带着温度的媒介，让无法时刻陪伴的牵挂有了落脚处，也让相隔千里的陪伴有了具体的形态。在按下开关的瞬间，是年轻人对家的眷恋在屏幕上流动；在关掉镜头的时刻，是对毛孩子自在天性的温柔守护。这样的平衡里，藏着当代人对 “连接” 的渴望——既想通过科技抓住那些重要的瞬间，又懂得为彼此留一份不被打扰的空间。这个小小的圆球，就这样在冰冷的电子设备与温热的情感需求之间，架起了一座柔软的桥，让牵挂有处可寻，让陪伴张弛有度。
+          </p>
+        `
+      },
+      elder: {
+        title: "老人照看：千里之外的牵挂线",
+        content: `
+          <div class="mb-6">
+            <img src="老人.jpg" alt="老人监控" class="w-full h-64 object-cover rounded-xl">
+          </div>
+          
+          <p class="font-kai text-lg leading-relaxed mb-4">
+            &emsp;&emsp;在湖北农村的青砖瓦房里，68 岁的周桂英老人（化名）对着墙上的监控摄像头挥了挥手。屏幕那头，远在广州打工的儿子正举着手机，看她把刚摘的豆角摆进竹篮。这个挂在堂屋门框上的白色设备，是三年前儿子回家时装上的，如今成了这个空巢家庭最沉默也最忠实的纽带。
+          </p>
+          
+          <p class="font-kai text-lg leading-relaxed mb-4">
+            &emsp;&emsp;"一开始觉得新鲜，对着镜头说话总怕说错啥。" 周桂英用袖口擦了擦摄像头表面的灰尘，指腹摩挲着边缘的划痕，"现在每天早上喂鸡、傍晚晒谷，都要在镜头前晃一晃，知道娃能看见，心里就踏实。" 根据村里的统计，像她这样安装了智能监控的空巢老人，这三年里从不到两成涨到了近四成，大多数都是在外子女主动要求安装的。
+          </p>
+          
+          <p class="font-kai text-lg leading-relaxed mb-4">
+            &emsp;&emsp;监控带来的改变在日常细节里悄悄发酵。去年冬天周桂英支气管炎犯了，躺在床上没力气做饭，儿子通过监控发现她没像往常一样坐在门口晒太阳，赶紧联系村医上门；孙子在城里幼儿园表演节目，特意让爸爸打开手机，对着监控给奶奶唱了首儿歌；就连院子里那棵老槐树开花时，儿子都会让她把摄像头转个方向，说要看看老家的春天。
+          </p>
+          
+          <p class="font-kai text-lg leading-relaxed mb-4">
+            &emsp;&emsp;"有回跟老头子拌嘴，声音大了点，半夜儿子就打视频过来劝和。" 周桂英笑着摆手，眼角的皱纹挤成一团，"后来才知道，他每天晚上都要点开监控看半小时，听着院子里的鸡叫狗吠才睡得着。" 这种被 "注视" 的感觉，起初让她很不自在，炒菜时会刻意把灶台收拾干净，说话也得注意分寸，生怕给子女留下 "老糊涂" 的印象。
+          </p>
+          
+          <p class="font-kai text-lg leading-relaxed mb-4">
+            &emsp;&emsp;但更多时候，监控像根无形的线，把千里之外的牵挂串了起来。儿子会通过监控提醒她天凉加衣，她也会对着镜头展示新做的布鞋；端午节包粽子时，她特意把摄像头调低，让屏幕那头的一家人 "围观" 全过程；有次暴雨冲垮了屋檐，她对着监控哭，儿子第二天就请了假赶回来修缮。
+          </p>
+          
+          <p class="font-kai text-lg leading-relaxed mb-4">
+            &emsp;&emsp;"年轻人说这叫 ' 云陪伴 '，咱不懂这些新名词。" 周桂英指着监控上方的白色罩子，这是她后来让儿子加上的，"但关起镜头的时候，才觉得这院子真正是自己的。" 她现在养成了习惯，晚上睡觉前会把罩子拉下，清晨喂完猪再打开 —— 就像给远方的牵挂拉上窗帘，既保留着透气的缝隙，又守住了独处的安宁。
+          </p>
+          
+        
+          <p class="font-kai text-lg leading-relaxed">
+            &emsp;&emsp;村里的老人们渐渐形成了心照不宣的默契：摄像头对着晒谷场的，多半是想让子女看看收成；对着堂屋八仙桌的，是盼着视频时能 "同桌" 吃饭；而像周桂英这样对着院子的，大概是想让远方的脚步，随时能踏上回家的路。这个小小的电子设备，就这样在赡养的责任与隐私的边界之间，架起了一座摇摇晃晃却又异常坚固的桥。
+          </p>
+        `
+      },
+      kid: {
+        title: "“监控式育儿”是守护还是束缚？——当镜头对准书桌，我们究竟在守望什么",
+        content: `
+          <div class="mb-6">
+            <img src="儿童.jpg" alt="儿童监护" class="w-full h-64 object-cover rounded-xl">
+          </div>
+          
+          <p class="font-kai text-lg leading-relaxed mb-4">
+            &emsp;&emsp;2020 年那则登上热搜的视频，只是掀开了“监控式育儿”冰山的一角。短短十几秒的画面里，摄像头代替母亲坐在书桌旁，冰冷的电子女声反复纠正一年级女孩的坐姿。4 亿阅读量背后，是无数家长感同身受的“效率狂欢”与无数孩子无处可逃的“凝视焦虑”。当家用监控从看护老人、防盗报警延伸到教育场景，我们不得不问：镜头之下，被守护的究竟是孩子的成长，还是家长的控制欲？
+          </p>
+          
+          <p class="font-kai text-lg leading-relaxed mb-4">
+            &emsp;&emsp;淘宝数据显示，2023 年 6 月至 2024 年 6 月，带有“学生自律”“陪读”关键词的家用摄像头销量同比增长 156%。在社交平台上搜索“陪读摄像头”，点赞过万的笔记里满是“孩子半小时写完作业”“数学成绩从 70 到 95”的欣喜。然而，中国教育科学研究院 2023 年对四省市 1300 名中小学生的问卷调查显示，63% 被监控学生“一想到镜头就紧张”，48% 承认“会故意在父母下班前装出认真学习的样子”。更隐蔽的伤害在于心理成本的转嫁：孩子把写作业异化为“表演”，家长把教育责任简化为“盯梢”，双方都在镜头里松一口气，却在镜头外渐行渐远。
+          </p>
+          
+          <p class="font-kai text-lg leading-relaxed mb-4">
+            &emsp;&emsp;北京大学教育学院一项实验发现，当摄像头具备“实时对讲”功能时，家长平均每 7.3 分钟就会发出一次语音指令。高频干预下，孩子的“自我调节时间”被切割成碎片，专注力反而下降。一位深圳五年级男生在作文里写道：“摄像头像老师的眼，又像妈妈的嘴，它不说话的时候我更害怕，因为下一秒可能就会爆炸。”镜头成为权力放大器：家长借助技术获得了全天候的“在场”，却剥夺了孩子试错与自省的空间。当“坐姿不端”会被即时喝止，孩子学会的不再是挺直脊背，而是躲避惩罚。
+          </p>
+          
+          <p class="font-kai text-lg leading-relaxed mb-4">
+            &emsp;&emsp;民法典第 1033 条规定，未成年人享有隐私权，监护人处理未成年人个人信息时应遵循“最小必要原则”。北京青少年法律援助中心 2024 年接到 17 起相关咨询：有孩子因父母将摄像头录屏上传至家庭群而遭遇同龄人嘲笑，产生厌学情绪；也有家长因摄像头安装在卧室被孩子起诉侵权。德国联邦法院 2022 年的判例值得借鉴：父母可在公共区域安装摄像头防止幼儿意外，但不得覆盖孩子房间，因为“个人空间是人格自由发展的必要条件”。技术便利不应成为侵犯权利的挡箭牌，家庭教育首先应当尊重教育对象的主体性。
+          </p>
+          
+          <p class="font-kai text-lg leading-relaxed mb-4">
+            &emsp;&emsp;广州家长陈女士的做法提供了另一种思路：她把摄像头设置为“延时摄影”模式，每 25 分钟生成一段 8 秒短视频，周末与孩子一起回看“本周最专注瞬间”，并共同复盘错题。三个月后，孩子主动提出“把番茄钟延长到 30 分钟”。技术在这里不再是居高临下的审判，而成为亲子对话的媒介。杭州学军小学则尝试“行为可视化”系统：家长手机只接收“当日专注时长”与“错题分布”等数据化报告，不呈现实时画面。当孩子看到自己的“专注曲线”逐步上升，内驱力被悄然唤醒。
+          </p>
+          
+          <p class="font-kai text-lg leading-relaxed mb-4">
+            &emsp;&emsp;古希腊哲学家第欧根尼白天提灯寻找“真正的人”，被问及为何在光天化日之下点灯，他回答：“我在找愿意为自己负责的人。”教育的本质亦如此。摄像头可以记录孩子有没有写完作业，却无法替他体验攻克难题的成就感；可以提醒孩子坐直身体，却无法赋予他挺拔一生的精神力量。当家长放下手机，走到书桌旁和孩子一起制定计划、复盘错题，镜头里的像素才会被眼神里的温度取代。江苏一位母亲在拔掉摄像头后，与孩子签下“学习契约”：每周共同制定目标，完成后一起骑行 10 公里。三个月后，孩子成绩稳步提升，更重要的是，他第一次主动说：“妈妈，今天我想把练习提前做完，这样周末可以去更远的地方。”
+          </p>
+          
+          <p class="font-kai text-lg leading-relaxed">
+            &emsp;&emsp;镜头熄灭的瞬间，亲子之间那盏灯才真正亮起。监控式育儿或许能在短期内换来工整的坐姿和漂亮的分数，却换不来孩子望向未来的笃定目光。当我们收起摄像头，才会发现：需要被守护的从来不是作业本上的红勾，而是孩子心里那团愿意为自己负责的火。
+          </p>
+        `
+      },
+      alone: {
+        title: "独居安全：双刃剑般的守护",
+        content: `
+          <div class="mb-6">
+            <img src="独居.jpg" alt="独居监控" class="w-full h-64 object-cover rounded-xl">
+          </div>
+          
+          <p class="font-kai text-lg leading-relaxed mb-4">
+            &emsp;&emsp;近年来，家用监控在国内迅速普及。根据洛图科技（RUNTO）最新发布的数据显示，2024年，中国监控摄像头消费级市场销量为5349万套，室外看管、老幼宠物看护是最为常见的应用场景，除了这些常见的场景之外，许多独居青年也选择在家里安装一个小而巧的监控。
+          </p>
+          
+          <p class="font-kai text-lg leading-relaxed mb-4">
+            &emsp;&emsp;现在在广东某公安单位实习的21岁青年小叶，在独居不久后，出于安全的考虑，下单了人生第一台家用摄像头——一台小米云台智能摄像机。
+          </p>
+          
+          <p class="font-kai text-lg leading-relaxed mb-4">
+            &emsp;&emsp;"一个人住，总怕哪天忘关灯、忘关窗，更怕真有人溜进来。"小叶告诉我们，自己装监控的核心原因就是防盗，"能在手机上随时看到家里的情况，让我心里踏实不少。"下单前，她花了许多时间刷博主测评、在购物软件上对比参数，浏览买家评价，最终因觉得"小米大品牌可信、性价比高"而下单付款。收到监控后，她对着说明书一步步操作，很快就把摄像头放在了入户柜子的角落，"全程自己操作，没有寻求别人的帮助，还是很好上手的"
+          </p>
+          
+          <p class="font-kai text-lg leading-relaxed mb-4">
+            &emsp;&emsp;真正使用起来后，家用监控成为了小叶的得力"生活助手"：值夜班回不了家，可以随时远程看看家里的情况；遇到台风天，可以看看家里的窗户、阳台门是否关好；找不到充电宝，直接翻录像，看看是不是出门着急忘记带走了。小叶和我们说，自己有的时候有点丢三落四的，事情一多，有的细节便会记不清，安装了家用监控后可以在一定程度上缓解她对于家里的安全焦虑。"万一有小偷偷偷溜进来，还可以留作证据报警，虽然我屋里也没有啥值钱的东西。但最主要的还是感觉有监控在会让我的人身安全加多了一层保障。"
+          </p>
+          
+          <p class="font-kai text-lg leading-relaxed mb-4">
+            &emsp;&emsp;不过，增加了安全感的同时，隐私焦虑也随之而来。"网上说摄像头被黑，隐私被泄露的帖子太多了，而且确实是有很多这种真实的案例，所以我也会有点担心和害怕。"小叶坦言，为此她做了两手准备：一是挑选大品牌，降低隐私被泄露的风险，二是人在家时就关机，或者让镜头对着墙，避免自己被拍进去。
+          </p>
+          
+          <p class="font-kai text-lg leading-relaxed mb-4">
+            &emsp;&emsp;家用监控也在悄悄改变她的生活习惯。出于对隐私安全的担忧，监控开着的时候，她会下意识穿戴整齐，"有的时候下班回来想在沙发上瘫一会感觉也没有那么自在，监控开着的时候就总有被监视的感觉。"因此，小叶现在养成了下班回家把监控的摄像头对准墙壁的习惯。"它像一把双刃剑，既保护我，也提醒我，隐私和安全不可兼得，有时候只能选一边。"
+          </p>
+          
+          <p class="font-kai text-lg leading-relaxed mb-4">
+            &emsp;&emsp;"独居相比于之前在学校里的宿舍生活，对比起家里都自由得多，你做任何事都可以，都没有人管。"独居的自在感，她不想被任何人打破，因此她从未想过要和家里人共享监控权限，她认为共享监控后，会有种自己的生活被人监视着的感觉，感觉自己的生活空间被侵犯了。
+          </p>
+          
+          <p class="font-kai text-lg leading-relaxed">
+            &emsp;&emsp;如今，家里小小的监控每天都在发挥自己的职能，看好这个家，小叶也习惯了有家用监控在的生活。"感觉家里这个监控总体上来说给我的生活还是带来了很多帮助的，虽然会有担心，但平常使用的时候注意好应该没有什么大问题。"
+          </p>
+        `
+      }
+    };
+    
+    // 故事模态框
+    const modal = document.getElementById('story-modal');
+    const modalContent = document.getElementById('modal-content');
+    const modalBody = document.getElementById('modal-body');
+    // 添加样式：限制最大高度并启用内部滚动
+    modalBody.style.maxHeight = '80vh';
+    modalBody.style.overflowY = 'auto';
+    const closeModal = document.getElementById('close-modal');
+    const modalOverlay = document.getElementById('modal-overlay');
+    
+    // 打开模态框
+    document.querySelectorAll('.story-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const storyId = this.getAttribute('data-story');
+        const story = stories[storyId];
+        
+        modalBody.innerHTML = `
+          <h3 class="font-microsoft text-2xl font-semibold mb-6 text-sky">${story.title}</h3>
+          ${story.content}
+        `;
+        
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+          modalContent.classList.remove('scale-95', 'opacity-0');
+          modalContent.classList.add('scale-100', 'opacity-1');
+        }, 10);
+        
+
+      });
+    });
+    
+    // 关闭模态框
+    function closeModalFunc() {
+      modalContent.classList.remove('scale-100', 'opacity-1');
+      modalContent.classList.add('scale-95', 'opacity-0');
+      
+      setTimeout(() => {
+        modal.classList.add('hidden');
+        document.body.style.overflow = '';
+      }, 300);
+    }
+    
+    closeModal.addEventListener('click', closeModalFunc);
+    modalOverlay.addEventListener('click', closeModalFunc);
+    
+    // 调查表单提交
+    document.getElementById('survey-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      this.classList.add('hidden');
+      document.getElementById('submit-success').classList.remove('hidden');
+      
+      // 滚动到成功提示
+      document.getElementById('submit-success').scrollIntoView({ behavior: 'smooth' });
+    });
+    
+    // 词云动画效果
+    const wordcloud = document.getElementById('wordcloud');
+    const words = wordcloud.querySelectorAll('span');
+    
+    words.forEach(word => {
+      // 随机延迟动画
+      const delay = Math.random() * 3;
+      word.style.animation = `fadeIn 1s ease-out ${delay}s forwards`;
+      word.style.opacity = '0';
+      
+      // 悬停效果
+      word.addEventListener('mouseenter', function() {
+        this.style.transform = 'scale(1.2)';
+        this.style.transition = 'transform 0.3s ease';
+        this.style.zIndex = '10';
+      });
+      
+      word.addEventListener('mouseleave', function() {
+        this.style.transform = 'scale(1)';
+        this.style.zIndex = '1';
+      });
+    });
+  </script>
+</body>
+</html>
